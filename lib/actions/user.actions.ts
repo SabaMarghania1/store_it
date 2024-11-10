@@ -1,11 +1,11 @@
 "use server";
 
 import { ID, Query } from "node-appwrite";
-import { createAdminClient } from "../appwrite";
+import { createAdminClient, createSessionClient } from "../appwrite";
 import { appwriteConfig } from "../appwrite/config";
 import { parseStringify } from "../utils";
-import { string } from "zod";
 import { cookies } from "next/headers";
+import { avatarPlaceholder } from "@/constants";
 
 const getUserByEmail = async (email: string) => {
   const { databases } = await createAdminClient();
@@ -57,8 +57,7 @@ export const createAccount = async ({
       {
         fullName,
         email,
-        avatar:
-          "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg",
+        avatar: avatarPlaceholder,
         accountId,
       }
     );
@@ -88,4 +87,18 @@ export const verifySecret = async ({
   } catch (err) {
     handleError(err, "failed to verify secret");
   }
+};
+
+export const getCurrentUser = async () => {
+  const { databases, account } = await createSessionClient();
+  const result = await account.get();
+  const user = await databases.listDocuments(
+    appwriteConfig.databaseId,
+    appwriteConfig.usersCollectionId,
+    [Query.equal("accountId", [result.$id])]
+  );
+
+  return parseStringify(
+    user.total > 0 ? { ...user.documents[0], accountId: result.$id } : null
+  );
 };
