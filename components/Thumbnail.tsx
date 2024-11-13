@@ -1,5 +1,6 @@
-import { cn, getFileIcon } from "@/lib/utils";
+import React from "react";
 import Image from "next/image";
+import { cn, getFileIcon } from "@/lib/utils";
 
 interface Props {
   type: string;
@@ -8,7 +9,8 @@ interface Props {
   imageClassName?: string;
   className?: string;
 }
-const Thumbnail = ({
+
+export const Thumbnail = ({
   type,
   extension,
   url = "",
@@ -21,7 +23,7 @@ const Thumbnail = ({
     <figure className={cn("thumbnail", className)}>
       <Image
         src={isImage ? url : getFileIcon(extension, type)}
-        alt={"thumbnail"}
+        alt="thumbnail"
         width={100}
         height={100}
         className={cn(
