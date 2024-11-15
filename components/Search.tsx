@@ -34,7 +34,7 @@ const Search = () => {
     };
 
     fetchFiles();
-  }, [debouncedQuery]);
+  }, [debouncedQuery, query]);
 
   useEffect(() => {
     if (!searchQuery) {

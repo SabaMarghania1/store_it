@@ -1,5 +1,12 @@
 "use server";
 
+import { createAdminClient, createSessionClient } from "@/lib/appwrite";
+import { InputFile } from "node-appwrite/file";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import { ID, Models, Query } from "node-appwrite";
+import { constructFileUrl, getFileType, parseStringify } from "@/lib/utils";
+import { revalidatePath } from "next/cache";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import {
   DeleteFileProps,
   GetFilesProps,
@@ -7,13 +14,11 @@ import {
   UpdateFileUsersProps,
   UploadFileProps,
 } from "@/types";
-import { createAdminClient } from "../appwrite";
-import { getCurrentUser, handleError } from "./user.actions";
-import { InputFile } from "node-appwrite/file";
-import { appwriteConfig } from "../appwrite/config";
-import { ID, Models, Query } from "node-appwrite";
-import { constructFileUrl, getFileType, parseStringify } from "../utils";
-import { revalidatePath } from "next/cache";
+
+const handleError = (error: unknown, message: string) => {
+  console.log(error, message);
+  throw error;
+};
 
 export const uploadFile = async ({
   file,
@@ -83,6 +88,7 @@ const createQueries = (
 
   if (sort) {
     const [sortBy, orderBy] = sort.split("-");
+
     queries.push(
       orderBy === "asc" ? Query.orderAsc(sortBy) : Query.orderDesc(sortBy)
     );
@@ -99,19 +105,24 @@ export const getFiles = async ({
 }: GetFilesProps) => {
   const { databases } = await createAdminClient();
 
-  const currentUser = await getCurrentUser();
+  try {
+    const currentUser = await getCurrentUser();
 
-  if (!currentUser) throw new Error("User Not Found");
+    if (!currentUser) throw new Error("User not found");
 
-  const queries = createQueries(currentUser, types, searchText, sort, limit);
+    const queries = createQueries(currentUser, types, searchText, sort, limit);
 
-  const files = await databases.listDocuments(
-    appwriteConfig.databaseId,
-    appwriteConfig.filesCollectionId,
-    queries
-  );
+    const files = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.filesCollectionId,
+      queries
+    );
 
-  return parseStringify(files);
+    console.log({ files });
+    return parseStringify(files);
+  } catch (error) {
+    handleError(error, "Failed to get files");
+  }
 };
 
 export const renameFile = async ({
@@ -121,6 +132,7 @@ export const renameFile = async ({
   path,
 }: RenameFileProps) => {
   const { databases } = await createAdminClient();
+
   try {
     const newName = `${name}.${extension}`;
     const updatedFile = await databases.updateDocument(
@@ -159,7 +171,7 @@ export const updateFileUsers = async ({
     revalidatePath(path);
     return parseStringify(updatedFile);
   } catch (error) {
-    handleError(error, "Failed to Add Users");
+    handleError(error, "Failed to rename file");
   }
 };
 
@@ -182,8 +194,8 @@ export const deleteFile = async ({
     }
 
     revalidatePath(path);
-    parseStringify({ status: "success" });
+    return parseStringify({ status: "success" });
   } catch (error) {
-    handleError(error, "Failed to Add Users");
+    handleError(error, "Failed to rename file");
   }
 };
